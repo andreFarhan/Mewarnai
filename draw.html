@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Studio Gambar – Palet • Template • Upload</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+  <style>
+    html,body{height:100%;background:#f8fafc;font-family:Inter,system-ui,sans-serif}
+    .panel{background:#fff;border:1px solid #e5e7eb;border-radius:16px;box-shadow:0 1px 1px rgba(0,0,0,.04)}
+    .btn{padding:.5rem .75rem;border-radius:.75rem;border:1px solid #e5e7eb;background:#fff;box-shadow:0 1px 1px rgba(0,0,0,.04);transition:background-color .15s,box-shadow .15s,transform .1s}
+    .btn:hover{background:#f8fafc;box-shadow:0 4px 14px rgba(2,6,23,.08)}
+    .btn:active{transform:scale(.97)}
+    .tool-active{background:#4f46e5;color:#fff;border-color:#4f46e5}
+    .swatch{width:24px;height:24px;border-radius:9999px;border:1px solid #cbd5e1;cursor:pointer}
+    .swatch:hover{box-shadow:0 0 0 3px rgba(79,70,229,.25)}
+    canvas{touch-action:none}
+    .dropzone{border:1.5px dashed #cbd5e1;border-radius:12px;padding:.75rem;text-align:center;color:#64748b}
+    .dropzone.drag{border-color:#4f46e5;background:#eef2ff;color:#3730a3}
+    input[type="url"],select{border:1px solid #e5e7eb;border-radius:.6rem;padding:.45rem .6rem;background:#fff}
+    /* galeri */
+    #fruitGallery img,#animalGallery img{cursor:pointer;border:1px solid #e5e7eb;border-radius:12px;padding:6px;background:#fff;transition:box-shadow .15s}
+    #fruitGallery img:hover,#animalGallery img:hover{box-shadow:0 6px 18px rgba(2,6,23,.10)}
+  </style>
+</head>
+<body>
+  <div class="max-w-7xl mx-auto p-5 md:p-8 grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-6">
+    <!-- SIDEBAR -->
+    <aside class="panel p-4 space-y-6">
+      <!-- 1) Palet Warna -->
+      <div class="space-y-3">
+        <h2 class="font-semibold text-slate-700">Palet Warna</h2>
+        <div class="flex items-center gap-2">
+          <select id="paletteSet">
+            <option>Dasar</option>
+            <option>Pastel</option>
+            <option>Tropis</option>
+            <option>Monokrom</option>
+            <option>Kulit</option>
+          </select>
+          <input id="customColor" type="color" value="#111827" title="Warna custom" />
+        </div>
+        <div id="palette" class="flex flex-wrap gap-2"></div>
+      </div>
+
+      <!-- 2) Template bawaan: buah & hewan -->
+      <div class="space-y-4">
+        <div>
+          <h2 class="font-semibold text-slate-700 mb-2">Template Buah (klik = ganti)</h2>
+          <div class="grid grid-cols-4 gap-2" id="fruitGallery"></div>
+        </div>
+        <div>
+          <h2 class="font-semibold text-slate-700 mb-2">Template Hewan (klik = ganti)</h2>
+          <div class="grid grid-cols-4 gap-2" id="animalGallery"></div>
+        </div>
+      </div>
+
+      <!-- 3) Template dari gambar (upload/url) -->
+      <div class="space-y-3">
+        <h2 class="font-semibold text-slate-700">Template dari Gambar</h2>
+        <div id="dz" class="dropzone">Tarik & lepas gambar ke sini</div>
+        <div class="flex items-center gap-2">
+          <input id="fileInput" class="hidden" type="file" accept="image/*" />
+          <button id="pickBtn" class="btn">📂 Upload gambar</button>
+          <button id="clearTemplate" class="btn">🧹 Hapus template</button>
+        </div>
+        <div class="space-y-2">
+          <label class="text-sm text-slate-600">Atau pakai URL (yang support CORS biar bisa disave):</label>
+          <div class="flex items-center gap-2">
+            <input id="urlInput" type="url" placeholder="https://..." />
+            <button id="useUrl" class="btn">Gunakan</button>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <label class="text-sm text-slate-600 flex items-center gap-2">Opasitas
+            <input id="opacity" type="range" min="10" max="100" value="80" />
+          </label><br>
+          <label class="text-sm text-slate-600 flex items-center gap-2">Skala
+            <input id="scale" type="range" min="20" max="200" value="120" />
+          </label><br>
+          <button id="centerBtn" class="btn">🎯 Center</button>
+          <button id="fitBtn" class="btn">🖼️ Fit ke kanvas</button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="panel p-4 md:p-5 flex flex-col">
+      <header class="flex flex-wrap items-center gap-2 mb-3">
+        <div class="flex items-center gap-2">
+          <button class="btn tool-btn" data-tool="brush" title="Kuas (gambar bebas)">✏️ Kuas</button>
+          <button class="btn tool-btn" data-tool="eraser" title="Penghapus (transparan)">🧽 Eraser</button>
+        </div>
+        <div class="ml-auto flex items-center gap-2">
+          <label class="text-sm text-slate-600">Ukuran kuas</label>
+          <input id="brushSize" type="range" min="2" max="64" value="12"/>
+          <button id="undoBtn" class="btn" title="Undo">↶ Undo</button>
+          <button id="clearBtn" class="btn" title="Bersihkan coretan">🗑️ Bersihkan</button>
+          <button id="saveBtn" class="btn" title="Simpan PNG">💾 Simpan</button>
+        </div>
+      </header>
+
+      <div class="relative aspect-[4/3] rounded-xl border border-slate-200 overflow-hidden bg-white">
+        <canvas id="stage" class="absolute inset-0 w-full h-full"></canvas>
+        <canvas id="overlay" class="absolute inset-0 w-full h-full pointer-events-none"></canvas>
+      </div>
+      <p class="mt-3 text-sm text-slate-500">Urutan sesuai request: Palet → Template bawaan → Upload/URL. Eraser transparan, no dots. Klik template = ganti & bersihin coretan.</p>
+    </main>
+  </div>
+
+  <script>
+    // ====== STATE ======
+    const state = {
+      tool: 'brush',
+      color: '#111827',
+      brushSize: 12,
+      strokes: [],
+      history: [],
+      cursorPos: null,
+      template: { img: null, x: 0, y: 0, scale: 1.2, opacity: .8 }
+    };
+
+    // ====== CANVAS ======
+    const canvas = document.getElementById('stage');
+    const ctx = canvas.getContext('2d');
+    const overlay = document.getElementById('overlay');
+    const octx = overlay.getContext('2d');
+
+    function resizeCanvas(){
+      const rect = canvas.parentElement.getBoundingClientRect();
+      const dpr = Math.min(devicePixelRatio||1, 2);
+      [canvas, overlay].forEach(c=>{ c.width=Math.floor(rect.width*dpr); c.height=Math.floor(rect.height*dpr); c.style.width=rect.width+'px'; c.style.height=rect.height+'px'; });
+      ctx.setTransform(dpr,0,0,dpr,0,0); octx.setTransform(dpr,0,0,dpr,0,0);
+      if(!state.template.x && !state.template.y) centerTemplate();
+      drawAll(); drawOverlay();
+    }
+    window.addEventListener('resize', resizeCanvas);
+
+    // ====== DRAW ======
+    function drawAll(){
+      const w = canvas.clientWidth, h = canvas.clientHeight;
+      ctx.clearRect(0,0,w,h);
+      // template
+      if(state.template.img){
+        const {img,x,y,scale,opacity} = state.template;
+        const iw=img.naturalWidth, ih=img.naturalHeight; const dw=iw*scale, dh=ih*scale;
+        ctx.save(); ctx.globalAlpha = opacity; ctx.drawImage(img, x-dw/2, y-dh/2, dw, dh); ctx.restore();
+      }
+      // strokes
+      ctx.lineCap='round'; ctx.lineJoin='round';
+      state.strokes.forEach(st=>{ ctx.save(); ctx.globalCompositeOperation = st.erase ? 'destination-out' : 'source-over'; ctx.strokeStyle = st.color; ctx.lineWidth = st.size; ctx.beginPath(); st.points.forEach((p,i)=>{ if(i===0) ctx.moveTo(p.x,p.y); else ctx.lineTo(p.x,p.y); }); ctx.stroke(); ctx.restore(); });
+    }
+
+    function drawOverlay(){
+      const w = overlay.clientWidth, h = overlay.clientHeight; octx.clearRect(0,0,w,h);
+      if(state.cursorPos && (state.tool==='brush' || state.tool==='eraser')){ octx.save(); octx.beginPath(); octx.arc(state.cursorPos.x, state.cursorPos.y, state.brushSize/2, 0, Math.PI*2); octx.lineWidth=1.5; octx.setLineDash(state.tool==='eraser'?[4,4]:[]); octx.strokeStyle='rgba(15,23,42,.85)'; octx.stroke(); octx.restore(); }
+    }
+
+    // ====== HISTORY ======
+    function pushHistory(){ const snap = JSON.stringify({ strokes: state.strokes.map(s=>({points:s.points.map(p=>({...p})), size:s.size, color:s.color, erase:s.erase})), template:{ x:state.template.x, y:state.template.y, scale:state.template.scale, opacity:state.template.opacity, has:!!state.template.img } }); state.history.push(snap); if(state.history.length>80) state.history.shift(); }
+    function undo(){ const snap = state.history.pop(); if(!snap) return; const data=JSON.parse(snap); state.strokes=data.strokes; if(state.template.img && data.template.has){ state.template.x=data.template.x; state.template.y=data.template.y; state.template.scale=data.template.scale; state.template.opacity=data.template.opacity; } drawAll(); drawOverlay(); }
+
+    // ====== TOOLS ======
+    function setTool(name){ state.tool=name; document.querySelectorAll('.tool-btn').forEach(b=>b.classList.toggle('tool-active', b.dataset.tool===name)); drawOverlay(); }
+
+    let drawing=false;
+    canvas.addEventListener('pointerdown', (e)=>{ const pos=pointerPos(e); canvas.setPointerCapture(e.pointerId); if(state.tool==='brush' || state.tool==='eraser'){ pushHistory(); drawing=true; const stroke={points:[pos], size:state.brushSize, color:state.color, erase:(state.tool==='eraser')}; state.strokes.push(stroke); drawAll(); }});
+    canvas.addEventListener('pointermove', (e)=>{ const pos=pointerPos(e); state.cursorPos=pos; drawOverlay(); if(drawing){ const stroke=state.strokes[state.strokes.length-1]; stroke.points.push(pos); drawAll(); }});
+    canvas.addEventListener('pointerup', ()=>{ drawing=false; });
+    canvas.addEventListener('pointercancel', ()=>{ drawing=false; });
+    canvas.addEventListener('pointerleave', ()=>{ state.cursorPos=null; drawOverlay(); });
+    function pointerPos(e){ const r=canvas.getBoundingClientRect(); return {x:(e.touches?e.touches[0].clientX:e.clientX)-r.left, y:(e.touches?e.touches[0].clientY:e.clientY)-r.top}; }
+
+    // ====== UI BUTTONS ======
+    document.querySelectorAll('.tool-btn').forEach(btn=>btn.addEventListener('click', ()=> setTool(btn.dataset.tool)));
+    document.getElementById('brushSize').addEventListener('input', (e)=>{ state.brushSize=+e.target.value; drawOverlay(); });
+    document.getElementById('undoBtn').addEventListener('click', undo);
+    document.getElementById('clearBtn').addEventListener('click', ()=>{ pushHistory(); state.strokes=[]; drawAll(); drawOverlay(); });
+    document.getElementById('saveBtn').addEventListener('click', ()=>{ const w=canvas.width,h=canvas.height; const t=document.createElement('canvas'); t.width=w; t.height=h; const tctx=t.getContext('2d'); tctx.fillStyle='#ffffff'; tctx.fillRect(0,0,w,h); // latar putih
+      // gambar template + stroke ke export canvas dengan skala DPR
+      if(state.template.img){ const {img,x,y,scale,opacity}=state.template; const iw=img.naturalWidth, ih=img.naturalHeight; const dw=iw*scale, dh=ih*scale; tctx.save(); tctx.globalAlpha=opacity; tctx.drawImage(img, x*devicePixelRatio-(dw*devicePixelRatio)/2, y*devicePixelRatio-(dh*devicePixelRatio)/2, dw*devicePixelRatio, dh*devicePixelRatio); tctx.restore(); }
+      tctx.drawImage(canvas,0,0); const a=document.createElement('a'); a.download='karya.png'; a.href=t.toDataURL('image/png'); a.click(); });
+
+    // ====== TEMPLATE: Upload / URL ======
+    const dz=document.getElementById('dz'); const fileInput=document.getElementById('fileInput'); const pickBtn=document.getElementById('pickBtn'); const urlInput=document.getElementById('urlInput');
+    document.getElementById('useUrl').addEventListener('click', ()=>{ const url=urlInput.value.trim(); if(url) loadTemplateFromURL(url); });
+    document.getElementById('clearTemplate').addEventListener('click', ()=>{ state.template.img=null; state.strokes=[]; drawAll(); });
+    document.getElementById('opacity').addEventListener('input', (e)=>{ state.template.opacity=(+e.target.value)/100; drawAll(); });
+    document.getElementById('scale').addEventListener('input', (e)=>{ state.template.scale=(+e.target.value)/100; drawAll(); });
+    document.getElementById('centerBtn').addEventListener('click', ()=>{ centerTemplate(); drawAll(); });
+    document.getElementById('fitBtn').addEventListener('click', ()=>{ fitTemplate(); drawAll(); });
+
+    pickBtn.addEventListener('click', ()=> fileInput.click());
+    fileInput.addEventListener('change', (e)=>{ const f=e.target.files && e.target.files[0]; if(!f) return; loadTemplateFromFile(f); });
+    ;['dragenter','dragover'].forEach(ev=>dz.addEventListener(ev,(e)=>{e.preventDefault(); dz.classList.add('drag');}));
+    ;['dragleave','drop'].forEach(ev=>dz.addEventListener(ev,(e)=>{e.preventDefault(); dz.classList.remove('drag');}));
+    dz.addEventListener('drop',(e)=>{ const f=e.dataTransfer.files && e.dataTransfer.files[0]; if(!f) return; loadTemplateFromFile(f); });
+
+    function loadTemplateFromFile(file){ const reader=new FileReader(); reader.onload=()=>{ const img=new Image(); img.onload=()=> setTemplateImage(img); img.src=reader.result; }; reader.readAsDataURL(file); }
+    function loadTemplateFromURL(url){ const img=new Image(); img.crossOrigin='anonymous'; img.onload=()=> setTemplateImage(img); img.onerror=()=> alert('Gagal load gambar (cek URL/CORS).'); img.src=url; }
+    function setTemplateImage(img){ pushHistory(); state.template.img=img; state.template.scale=1.2; state.template.opacity=.8; centerTemplate(); state.strokes=[]; drawAll(); drawOverlay(); }
+    function centerTemplate(){ const rect=canvas.getBoundingClientRect(); state.template.x=rect.width/2; state.template.y=rect.height/2; }
+    function fitTemplate(){ const rect=canvas.getBoundingClientRect(); if(!state.template.img) return; const {img}=state.template; const iw=img.naturalWidth, ih=img.naturalHeight; const scaleW=(rect.width*0.9)/iw; const scaleH=(rect.height*0.9)/ih; state.template.scale=Math.min(scaleW, scaleH); centerTemplate(); }
+
+    // ====== PALETTES ======
+    const PALETTE_SETS={
+      'Dasar':['#000000','#1f2937','#4b5563','#9ca3af','#ffffff','#ef4444','#f97316','#f59e0b','#84cc16','#22c55e','#06b6d4','#3b82f6','#8b5cf6','#ec4899'],
+      'Pastel':['#f8b4b4','#fbd38d','#fce588','#c6f6d5','#b2f5ea','#bee3f8','#d6bcfa','#fbb6ce','#e9d8fd','#e2e8f0'],
+      'Tropis':['#ef4444','#f97316','#f59e0b','#84cc16','#10b981','#06b6d4','#0ea5e9','#22d3ee','#14b8a6','#a3e635'],
+      'Monokrom':['#000000','#111827','#1f2937','#374151','#4b5563','#6b7280','#9ca3af','#d1d5db','#e5e7eb','#ffffff'],
+      'Kulit':['#ffdbac','#f1c27d','#e0ac69','#c68642','#8d5524','#7f5539','#f5e1da','#e2b9a8','#a1665e','#5c3d2e']
+    };
+    const paletteWrap=document.getElementById('palette'); const paletteSetSel=document.getElementById('paletteSet'); const customColor=document.getElementById('customColor');
+    function buildPalette(setName='Dasar'){ paletteWrap.innerHTML=''; const colors=PALETTE_SETS[setName]||PALETTE_SETS['Dasar']; colors.forEach(col=>{ const sw=document.createElement('button'); sw.className='swatch'; sw.style.background=col; sw.title=col; sw.addEventListener('click', ()=>{ state.color=toHex(col); highlightColor(state.color); }); paletteWrap.appendChild(sw); }); highlightColor(state.color); }
+    function highlightColor(col){ document.querySelectorAll('.swatch').forEach(s=>{ const active=toHex(s.style.background)===toHex(col); s.style.boxShadow=active?'0 0 0 3px rgba(79,70,229,.65)':'none'; }); }
+    function toHex(css){ if(css.startsWith('#')) return css.toLowerCase(); const m=css.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/); if(!m) return css; return '#'+[+m[1],+m[2],+m[3]].map(v=>v.toString(16).padStart(2,'0')).join(''); }
+    paletteSetSel.addEventListener('change', ()=> buildPalette(paletteSetSel.value));
+    customColor.addEventListener('input', (e)=>{ state.color=e.target.value; highlightColor(state.color); });
+
+    // ====== BUILTIN GALLERY (pakai SVG data URL) ======
+    function svgData(svg){ return 'data:image/svg+xml;utf8,'+encodeURIComponent(svg); }
+    const STROKE='#0f172a';
+    // buah: fokus stroberi bentuk "love"
+    const FRUIT_IMGS=[
+      {alt:'Stroberi', data: svgData(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120' fill='none' stroke='${STROKE}' stroke-width='4' stroke-linecap='round' stroke-linejoin='round'>
+        <path d='M60 30c12-8 30-4 32 10 2 18-16 40-32 52-16-12-34-34-32-52 2-14 20-18 32-10z'/>
+        <path d='M60 30c-4-6-2-12 6-14 6-2 12 0 16 4'/>
+      </svg>`)}
+    ];
+    // hewan: kucing kepala doang
+    const ANIMAL_IMGS=[
+      {alt:'Kucing (kepala)', data: svgData(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120' fill='none' stroke='${STROKE}' stroke-width='4' stroke-linecap='round' stroke-linejoin='round'>
+        <path d='M30 44l-8-14 18 8M90 44l8-14-18 8'/>
+        <path d='M28 86c0-24 18-40 32-40s32 16 32 40'/>
+        <path d='M52 62v8M68 62v8'/>
+        <path d='M60 60l3 4h-6l3-4'/>
+      </svg>`)}
+    ];
+    function populateBuiltinGalleries(){ const fruitEl=document.getElementById('fruitGallery'); const animalEl=document.getElementById('animalGallery'); if(fruitEl){ fruitEl.innerHTML=''; FRUIT_IMGS.forEach(it=>{ const im=document.createElement('img'); im.src=it.data; im.alt=it.alt; im.width=64; im.height=64; fruitEl.appendChild(im); }); } if(animalEl){ animalEl.innerHTML=''; ANIMAL_IMGS.forEach(it=>{ const im=document.createElement('img'); im.src=it.data; im.alt=it.alt; im.width=64; im.height=64; animalEl.appendChild(im); }); } }
+
+    // klik image di galeri -> set sebagai template + clear coretan
+    ;['fruitGallery','animalGallery'].forEach(id=>{ const root=document.getElementById(id); root.addEventListener('click',(e)=>{ const imgEl=e.target.closest('img'); if(!imgEl) return; const img=new Image(); img.crossOrigin='anonymous'; img.onload=()=>{ setTemplateImage(img); }; img.onerror=()=> alert('Gambar bawaan gagal dimuat.'); img.src=imgEl.src; }); });
+
+    // ====== INIT ======
+    function init(){ setTool('brush'); buildPalette('Dasar'); populateBuiltinGalleries(); resizeCanvas(); }
+    init();
+  </script>
+</body>
+</html>
